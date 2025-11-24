@@ -6,7 +6,8 @@ import {
   Dimensions, 
   TouchableOpacity, 
   Animated, 
-  Easing 
+  Easing,
+  ScrollView
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,9 +20,14 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHe
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(0);
+  const [showLyrics, setShowLyrics] = useState(true);
+  const [currentPosition, setCurrentPosition] = useState(0);
   
-  // Animation Value for rotation
+  // Animation Values
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const lyricsOpacity = useRef(new Animated.Value(1)).current;
+  const scrollViewRef = useRef(null);
 
   // Setup Rotation Animation
   useEffect(() => {
@@ -106,8 +112,30 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHe
       const duration = status.durationMillis || 1;
       const current = status.positionMillis || 0;
       setProgress(current / duration);
+      setCurrentPosition(current);
     }
   };
+
+  // Update current lyric based on playback position
+  useEffect(() => {
+    if (!item.lyrics || item.lyrics.length === 0) return;
+    
+    const currentIndex = item.lyrics.findIndex((lyric, index) => {
+      const nextLyric = item.lyrics[index + 1];
+      return currentPosition >= lyric.time && (!nextLyric || currentPosition < nextLyric.time);
+    });
+    
+    if (currentIndex !== -1 && currentIndex !== currentLyricIndex) {
+      setCurrentLyricIndex(currentIndex);
+      // Auto-scroll to current lyric
+      if (scrollViewRef.current && showLyrics) {
+        scrollViewRef.current.scrollTo({
+          y: currentIndex * 50, // Approximate height per lyric line
+          animated: true,
+        });
+      }
+    }
+  }, [currentPosition, item.lyrics]);
 
   const togglePlay = async () => {
     if (!sound) return;
@@ -118,6 +146,16 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHe
       await sound.playAsync();
       setIsPlaying(true);
     }
+  };
+
+  const toggleLyrics = () => {
+    const newValue = showLyrics ? 0 : 1;
+    Animated.timing(lyricsOpacity, {
+      toValue: newValue,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    setShowLyrics(!showLyrics);
   };
 
   return (
@@ -152,6 +190,30 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHe
           </Animated.View>
         </View>
 
+        {/* Lyrics Display */}
+        {item.lyrics && item.lyrics.length > 0 && (
+          <Animated.View style={[styles.lyricsContainer, { opacity: lyricsOpacity }]}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.lyricsScroll}
+              contentContainerStyle={styles.lyricsContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {item.lyrics.map((lyric, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.lyricLine,
+                    index === currentLyricIndex && styles.activeLyricLine,
+                  ]}
+                >
+                  {lyric.text}
+                </Text>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
+
         {/* Play Button Overlay (When Paused) */}
         {!isPlaying && isActive && (
           <TouchableOpacity 
@@ -167,6 +229,18 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHe
 
       {/* Right Side Actions */}
       <View style={styles.rightActionContainer}>
+        {/* Lyrics Toggle Button */}
+        {item.lyrics && item.lyrics.length > 0 && (
+          <TouchableOpacity style={styles.actionBtn} onPress={toggleLyrics}>
+            <Ionicons 
+              name={showLyrics ? "text" : "text-outline"} 
+              size={28} 
+              color="white" 
+            />
+            <Text style={styles.actionText}>Lyrics</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.actionBtn} onPress={() => setIsLiked(!isLiked)}>
           <Ionicons name={isLiked ? "heart" : "heart-outline"} size={32} color={isLiked ? "#ef4444" : "white"} />
           <Text style={styles.actionText}>24.5k</Text>
@@ -266,6 +340,37 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     overflow: 'hidden',
+  },
+  lyricsContainer: {
+    position: 'absolute',
+    top: '30%',
+    width: '80%',
+    maxHeight: 200,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 20,
+    padding: 20,
+    backdropFilter: 'blur(10px)',
+  },
+  lyricsScroll: {
+    flex: 1,
+  },
+  lyricsContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  lyricLine: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 16,
+    fontWeight: '500',
+    marginVertical: 8,
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+  },
+  activeLyricLine: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    transform: [{ scale: 1.1 }],
   },
   centerPlayBtn: {
     position: 'absolute',
