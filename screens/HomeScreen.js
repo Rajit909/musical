@@ -27,6 +27,7 @@ export default function HomeScreen() {
         isActive={activeItemIndex === index}
         isGlobalMuted={isGlobalMuted}
         toggleGlobalMute={() => setIsGlobalMuted(prev => !prev)}
+        containerHeight={WINDOW_HEIGHT - 79}
       />
     );
   };

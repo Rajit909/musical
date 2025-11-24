@@ -14,7 +14,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 
 const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get('window');
 
-const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute }) => {
+const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute, containerHeight }) => {
   const [sound, setSound] = useState();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -121,7 +121,7 @@ const SongCard = ({ item, isActive, isGlobalMuted, toggleGlobalMute }) => {
   };
 
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, { height: containerHeight || WINDOW_HEIGHT }]}>
       {/* Background Gradient */}
       <LinearGradient
         colors={item.color}

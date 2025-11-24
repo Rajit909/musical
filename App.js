@@ -1,62 +1,63 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { StyleSheet, View, FlatList, Dimensions, StatusBar } from 'react-native';
-import SongCard from './SongCard';
-import { SONG_DATA } from './data';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-const { height: WINDOW_HEIGHT } = Dimensions.get('window');
+import HomeScreen from './screens/HomeScreen';
+import SearchScreen from './screens/SearchScreen';
+import LibraryScreen from './screens/LibraryScreen';
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [activeItemIndex, setActiveItemIndex] = useState(0);
-  const [isGlobalMuted, setIsGlobalMuted] = useState(false);
-
-  // Viewability Config to determine which item is visible
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80, // Item is considered visible if 80% is shown
-  }).current;
-
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      setActiveItemIndex(viewableItems[0].index ?? 0);
-    }
-  }).current;
-
-  const renderItem = ({ item, index }) => {
-    return (
-      <SongCard 
-        item={item} 
-        isActive={activeItemIndex === index}
-        isGlobalMuted={isGlobalMuted}
-        toggleGlobalMute={() => setIsGlobalMuted(prev => !prev)}
-      />
-    );
-  };
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <FlatList
-        data={SONG_DATA}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        pagingEnabled
-        vertical
-        showsVerticalScrollIndicator={false}
-        snapToInterval={WINDOW_HEIGHT}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        viewabilityConfig={viewabilityConfig}
-        onViewableItemsChanged={onViewableItemsChanged}
-        getItemLayout={(data, index) => (
-          { length: WINDOW_HEIGHT, offset: WINDOW_HEIGHT * index, index }
-        )}
-      />
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: 'rgba(0,0,0,0.9)',
+              borderTopColor: 'rgba(255,255,255,0.1)',
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              elevation: 0,
+              height: 80, // Taller tab bar for modern look
+              paddingBottom: 20,
+              paddingTop: 10,
+            },
+            tabBarActiveTintColor: 'white',
+            tabBarInactiveTintColor: 'gray',
+            tabBarIcon: ({ focused, color, size }) => {
+              let iconName;
+
+              if (route.name === 'Home') {
+                iconName = focused ? 'home' : 'home-outline';
+              } else if (route.name === 'Search') {
+                iconName = focused ? 'search' : 'search-outline';
+              } else if (route.name === 'Library') {
+                iconName = focused ? 'library' : 'library-outline';
+              }
+
+              return <Ionicons name={iconName} size={28} color={color} />;
+            },
+            tabBarLabelStyle: {
+              fontSize: 10,
+              fontWeight: '600',
+            }
+          })}
+        >
+          <Tab.Screen name="Home" component={HomeScreen} />
+          <Tab.Screen name="Search" component={SearchScreen} />
+          <Tab.Screen name="Library" component={LibraryScreen} />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-});
