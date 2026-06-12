@@ -2,6 +2,7 @@
   "expo": {
     "name": "Musical",
     "slug": "musical",
+    "scheme": "musical",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -52,7 +53,9 @@
           "savePhotosPermission": "Allow Musical to save photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-web-browser",
+      "./withSpotifyQueries.js"
     ],
     "extra": {
       "eas": {

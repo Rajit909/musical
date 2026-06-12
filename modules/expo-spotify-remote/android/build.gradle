@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.spotifyremote'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.spotifyremote"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation fileTree(dir: 'libs', include: ['*.aar'])
+  implementation 'com.google.code.gson:gson:2.9.0'
+}

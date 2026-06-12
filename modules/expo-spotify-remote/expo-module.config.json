@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoSpotifyRemoteModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.spotifyremote.ExpoSpotifyRemoteModule"]
+  }
+}
