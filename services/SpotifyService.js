@@ -60,3 +60,8 @@ export const getUserPlaylists = async () => {
 export const searchSpotify = async (query, type = 'track,artist,album') => {
   return fetchWithToken(`/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}`);
 };
+
+export const getUserTopTracks = async () => {
+  // Fetch user's top tracks
+  return fetchWithToken('/me/top/tracks?limit=10');
+};

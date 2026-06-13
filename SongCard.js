@@ -9,9 +9,9 @@ import {
   Easing,
   ScrollView,
 } from "react-native";
-import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import ExpoSpotifyRemoteModule from "./modules/expo-spotify-remote/src/ExpoSpotifyRemoteModule";
 
 const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get("window");
 
@@ -22,7 +22,6 @@ const SongCard = ({
   toggleGlobalMute,
   containerHeight,
 }) => {
-  const [sound, setSound] = useState();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -61,72 +60,44 @@ const SongCard = ({
 
   // Handle Audio Playback
   useEffect(() => {
-    let soundObject = null;
-    let isCancelled = false;
-
-    const loadSound = async () => {
+    const playSpotify = async () => {
       try {
-        // Set audio mode for playback
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-        });
-
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: item.audioUrl },
-          { shouldPlay: isActive, isLooping: true, isMuted: isGlobalMuted },
-          onPlaybackStatusUpdate
-        );
-
-        if (isCancelled) {
-          await newSound.unloadAsync();
-          return;
+        if (item.spotifyUri) {
+          await ExpoSpotifyRemoteModule.play(item.spotifyUri);
+          setIsPlaying(true);
         }
-
-        soundObject = newSound;
-        setSound(newSound);
-        if (isActive) setIsPlaying(true);
       } catch (error) {
-        if (__DEV__) {
-          console.log("Error loading sound", error);
-        }
+        console.log("Error playing spotify uri", error);
       }
     };
 
-    const unloadSound = async () => {
-      if (soundObject) {
-        try {
-          await soundObject.unloadAsync();
-        } catch (error) {
-          if (__DEV__) {
-            console.log("Error unloading sound", error);
-          }
-        }
-        soundObject = null;
-        setSound(null);
+    const pauseSpotify = async () => {
+      try {
+        await ExpoSpotifyRemoteModule.pause();
         setIsPlaying(false);
+      } catch (error) {
+        console.log("Error pausing spotify", error);
       }
     };
 
     if (isActive) {
-      loadSound();
+      playSpotify();
     } else {
-      unloadSound();
+      pauseSpotify();
     }
 
     return () => {
-      isCancelled = true;
-      unloadSound();
+      if (isActive) {
+        pauseSpotify();
+      }
     };
-  }, [isActive, item.audioUrl]);
+  }, [isActive, item.spotifyUri]);
 
   // Handle Mute Toggling dynamically
   useEffect(() => {
-    if (sound) {
-      sound.setIsMutedAsync(isGlobalMuted);
-    }
-  }, [isGlobalMuted, sound]);
+    // Spotify App Remote SDK does not expose a direct mute volume method in the same way.
+    // If you need global mute, you'd have to control device volume.
+  }, [isGlobalMuted]);
 
   const onPlaybackStatusUpdate = (status) => {
     if (status.isLoaded) {
@@ -162,14 +133,15 @@ const SongCard = ({
   }, [currentPosition, item.lyrics]);
 
   const togglePlay = async () => {
-    if (!sound) return;
     try {
       if (isPlaying) {
-        await sound.pauseAsync();
+        await ExpoSpotifyRemoteModule.pause();
         setIsPlaying(false);
       } else {
-        await sound.playAsync();
-        setIsPlaying(true);
+        if (item.spotifyUri) {
+          await ExpoSpotifyRemoteModule.play(item.spotifyUri);
+          setIsPlaying(true);
+        }
       }
     } catch (error) {
       if (__DEV__) {

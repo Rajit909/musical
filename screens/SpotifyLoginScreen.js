@@ -1,10 +1,62 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import ExpoSpotifyRemoteModule from '../modules/expo-spotify-remote/src/ExpoSpotifyRemoteModule';
-import { SPOTIFY_CLIENT_ID } from '../utils/spotifyAuth';
+import { SPOTIFY_CLIENT_ID, spotifyDiscovery, spotifyScopes } from '../utils/spotifyAuth';
+import * as WebBrowser from 'expo-web-browser';
+import { useAuthRequest, ResponseType, makeRedirectUri, exchangeCodeAsync } from 'expo-auth-session';
+import { saveAccessToken } from '../services/SpotifyService';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SpotifyLoginScreen({ onLoginSuccess }) {
   const [isConnecting, setIsConnecting] = useState(false);
+
+  const redirectUri = makeRedirectUri({
+    scheme: 'musical'
+  });
+  
+  // Log this so we can easily add it to the Spotify Dashboard
+  console.log("EXACT REDIRECT URI FOR SPOTIFY DASHBOARD:", redirectUri);
+
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: SPOTIFY_CLIENT_ID,
+      scopes: spotifyScopes,
+      usePKCE: true,
+      redirectUri,
+    },
+    spotifyDiscovery
+  );
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      
+      exchangeCodeAsync(
+        {
+          clientId: SPOTIFY_CLIENT_ID,
+          code,
+          redirectUri,
+          extraParams: {
+            code_verifier: request?.codeVerifier,
+          },
+        },
+        spotifyDiscovery
+      ).then(tokenResponse => {
+        saveAccessToken(tokenResponse.accessToken).then(() => {
+          connectAppRemote();
+        });
+      }).catch(err => {
+        setIsConnecting(false);
+        Alert.alert('Token Exchange Error', err.message);
+      });
+    } else if (response?.type === 'error') {
+      setIsConnecting(false);
+      Alert.alert('Authentication Error', response.error || 'Failed to authenticate with Spotify.');
+    } else if (response?.type === 'dismiss') {
+      setIsConnecting(false);
+    }
+  }, [response]);
 
   const handleConnect = async () => {
     if (Platform.OS !== 'android') {
@@ -13,6 +65,10 @@ export default function SpotifyLoginScreen({ onLoginSuccess }) {
     }
 
     setIsConnecting(true);
+    promptAsync();
+  };
+
+  const connectAppRemote = async () => {
     try {
       // Use Client ID from .env
       const clientId = SPOTIFY_CLIENT_ID; 
